@@ -1,0 +1,269 @@
+/*24 .company maintains employee information as employee ID, name, designation and 
+salary. Allow user to add, delete information of employee. Display information of 
+particular employee. If employee does not exist an appropriate message is displayed. If 
+it is, then the system displays the employee details. Use index sequential file to maintain 
+ 
+the data.
+*/
+
+#include <iostream>
+#include <fstream>
+using namespace std;
+
+// Structure to represent an employee
+struct Employee {
+    int employeeId;
+    string name;
+    string designation;
+    double salary;
+};
+
+// Function to add an employee record to the file
+void addEmployee(const Employee& employee) {
+    ofstream file("employee_data.txt", ios::binary | ios::app);
+    if (!file) {
+        cout << "Error opening the file.\n";
+        return;
+    }
+
+    file.write(reinterpret_cast<const char*>(&employee), sizeof(Employee));
+    file.close();
+}
+
+// Function to delete an employee record from the file
+void deleteEmployee(int employeeId) {
+    ifstream inFile("employee_data.txt", ios::binary);
+    if (!inFile) {
+        cout << "Error opening the file.\n";
+        return;
+    }
+
+    ofstream outFile("temp.txt", ios::binary);
+    if (!outFile) {
+        cout << "Error opening the file.\n";
+        inFile.close();
+        return;
+    }
+
+    Employee employee;
+    bool found = false;
+
+    while (inFile.read(reinterpret_cast<char*>(&employee), sizeof(Employee))) {
+        if (employee.employeeId != employeeId)
+            outFile.write(reinterpret_cast<const char*>(&employee), sizeof(Employee));
+        else
+            found = true;
+    }
+
+    inFile.close();
+    outFile.close();
+
+    if (found) {
+        remove("employee_data.txt");
+        rename("temp.txt", "employee_data.txt");
+        cout << "Employee deleted successfully.\n";
+    } else {
+        remove("temp.txt");
+        cout << "Employee not found.\n";
+    }
+}
+
+// Function to display information of a particular employee
+void displayEmployee(int employeeId) {
+    ifstream file("employee_data.txt", ios::binary);
+    if (!file) {
+        cout << "Error opening the file.\n";
+        return;
+    }
+
+    Employee employee;
+    bool found = false;
+
+    while (file.read(reinterpret_cast<char*>(&employee), sizeof(Employee))) {
+        if (employee.employeeId == employeeId) {
+            cout << "Employee ID: " << employee.employeeId << endl;
+            cout << "Name: " << employee.name << endl;
+            cout << "Designation: " << employee.designation << endl;
+            cout << "Salary: " << employee.salary << endl;
+            found = true;
+            break;
+        }
+    }
+
+    file.close();
+
+    if (!found)
+        cout << "Employee not found.\n";
+}
+
+int main() {
+    int choice;
+    Employee employee;
+
+    do {
+        cout << "1. Add employee\n";
+        cout << "2. Delete employee\n";
+        cout << "3. Display employee information\n";
+        cout << "4. Quit\n";
+        cout << "Enter your choice: ";
+        cin >> choice;
+
+        switch (choice) {
+            case 1:
+                cout << "Enter employee ID: ";
+                cin >> employee.employeeId;
+                cout << "Enter name: ";
+                cin.ignore();
+                getline(cin, employee.name);
+                cout << "Enter designation: ";
+                getline(cin, employee.designation);
+                cout << "Enter salary: ";
+                cin >> employee.salary;
+                addEmployee(employee);
+                break;
+            case 2:
+                cout << "Enter employee ID to delete: ";
+                cin >> employee.employeeId;
+                deleteEmployee(employee.employeeId);
+                break;
+            case 3:
+                cout << "Enter employee ID to display: ";
+                cin >> employee.employeeId;
+                displayEmployee(employee.employeeId);
+                break;
+                        case 4:
+                cout << "Exiting the program.\n";
+                break;
+            default:
+                cout << "Invalid choice. Please try again.\n";
+        }
+    } while (choice != 4);
+
+    return 0;
+}
+
+//25.Implementation of a direct access file -Insertion and deletion of a record from a direct 
+ //C++
+
+#include <iostream>
+#include <fstream>
+
+using namespace std;
+
+// Structure representing a record
+struct Record {
+    int id;
+    char name[50];
+};
+
+// Function to insert a record into the direct access file
+void insertRecord(fstream& file, const Record& record) {
+    file.seekp(record.id * sizeof(Record));
+    file.write(reinterpret_cast<const char*>(&record), sizeof(Record));
+}
+
+// Function to delete a record from the direct access file
+void deleteRecord(fstream& file, int id) {
+    Record record;
+    file.seekp(id * sizeof(Record));
+    file.write(reinterpret_cast<const char*>(&record), sizeof(Record));
+}
+
+// Function to display all records in the direct access file
+void displayRecords(fstream& file) {
+    file.seekg(0, ios::end);
+    int numRecords = file.tellg() / sizeof(Record);
+    file.seekg(0, ios::beg);
+
+    for (int i = 0; i < numRecords; ++i) {
+        Record record;
+        file.read(reinterpret_cast<char*>(&record), sizeof(Record));
+        if (record.id != 0) {
+            cout << "ID: " << record.id << ", Name: " << record.name << endl;
+        }
+    }
+}
+
+int main() {
+    fstream file("records.dat", ios::in | ios::out | ios::binary);
+
+    // Check if the file exists, if not create a new file
+    if (!file) {
+        file.open("records.dat", ios::out | ios::binary);
+        file.close();
+        file.open("records.dat", ios::in | ios::out | ios::binary);
+    }
+
+    int choice;
+    do {
+        cout << "1. Insert record" << endl;
+        cout << "2. Delete record" << endl;
+        cout << "3. Display records" << endl;
+        cout << "4. Exit" << endl;
+        cout << "Enter your choice: ";
+        cin >> choice;
+
+        switch (choice) {
+            case 1: {
+                Record record;
+                cout << "Enter ID: ";
+                cin >> record.id;
+                cout << "Enter Name: ";
+                cin.ignore(); // Ignore the newline character from previous input
+                cin.getline(record.name, 50);
+                insertRecord(file, record);
+                break;
+            }
+            case 2: {
+                int id;
+                cout << "Enter ID to delete: ";
+                cin >> id;
+                deleteRecord(file, id);
+                break;
+            }
+            case 3: {
+                displayRecords(file);
+                break;
+            }
+            case 4: {
+                cout << "Exiting..." << endl;
+                break;
+            }
+            default:
+                cout << "Invalid choice. Please try again." << endl;
+        }
+    } while (choice != 4);
+
+    file.close();
+
+    return 0;
+}
+/*
+output:- 
+
+1. Insert record
+2. Delete record
+3. Display records
+4. Exit
+Enter your choice: 3
+ID: 8059820, Name:
+ID: 12, Name: Aniket
+1. Insert record
+2. Delete record
+3. Display records
+4. Exit
+Enter your choice: 2
+Enter ID to delete: 12
+1. Insert record
+2. Delete record
+3. Display records
+4. Exit
+Enter your choice: 3
+ID: 8059820, Name:
+ID: 8059820, Name:
+1. Insert record
+2. Delete record
+3. Display records
+4. Exit
+Enter your choice: 4
+Exiting...*/
